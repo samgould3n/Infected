@@ -8,9 +8,9 @@ import type { Geofence } from '@/lib/types';
 const FenceEditor = dynamic(() => import('@/components/FenceEditor'), { ssr: false });
 
 const PRESETS: { name: string; fence: Geofence }[] = [
-  { name: 'Grimsby town centre', fence: { type: 'circle', center: { lat: 53.5675, lng: -0.0815 }, radiusM: 800 } },
+  { name: 'Bath city centre', fence: { type: 'circle', center: { lat: 51.3811, lng: -2.359 }, radiusM: 800 } },
   { name: 'Hyde Park, London', fence: { type: 'circle', center: { lat: 51.5073, lng: -0.1657 }, radiusM: 1000 } },
-  { name: 'Manchester city centre', fence: { type: 'circle', center: { lat: 53.4794, lng: -2.2453 }, radiusM: 800 } },
+  { name: 'Edinburgh Old Town', fence: { type: 'circle', center: { lat: 55.9486, lng: -3.1907 }, radiusM: 800 } },
 ];
 
 export default function NewGame() {
