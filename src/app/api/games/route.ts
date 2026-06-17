@@ -24,6 +24,10 @@ export async function POST(req: Request) {
     huntersSeeEachOther: !!s.huntersSeeEachOther,
     decoysPerSurvivor: clamp(s.decoysPerSurvivor, 0, 5, 1),
     geofence: s.geofence,
+    fenceMoves: !!s.fenceMoves,
+    fenceMoveMin: clamp(s.fenceMoveMin, 2, 60, 8),
+    activeRadiusM: s.activeRadiusM != null ? clamp(s.activeRadiusM, 100, 10000, 500) : undefined,
+    activeAreaFrac: s.activeAreaFrac != null ? Math.min(1, Math.max(0.1, Number(s.activeAreaFrac))) : undefined,
   };
   const f = settings.geofence;
   const fenceOk =
@@ -36,7 +40,7 @@ export async function POST(req: Request) {
     const code = code5();
     const { data: game, error } = await db
       .from('games')
-      .insert({ code, settings, status: 'lobby' })
+      .insert({ code, settings, status: 'lobby', master_fence: settings.geofence })
       .select()
       .single();
     if (error) continue; // code collision, retry

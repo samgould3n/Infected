@@ -83,3 +83,16 @@ Note: browsers only grant geolocation on HTTPS or localhost. Real multi-phone te
 
 - **Notifications are in-app** (toasts + vibration), not OS push. Web push on iOS requires an installed PWA and per-user opt-in flows that don't fit a pick-up game; every meaningful event also rides the realtime channel and the 10 s poll, so players are notified while the app is open — which it is, during play.
 - Battery: continuous `watchPosition` for a 60–90 min game is the expected cost; updates are throttled to one POST per 20 s.
+
+## v2 — moving fence & power-ups
+
+**Moving play area.** The host draws a *master boundary* (never changes). Inside it, an *active fence* (the real play area) shifts to a new random position on its own timer, with a 30-second red-outline warning before each move. Circle master → active circle of the host's chosen radius, first centred on the players' start; polygon master → a half-size scaled copy that keeps its shape. The only way to shrink the area is the hunter **Constrict** power-up (−7.5% area, permanent, original hunters only, one use, blocked at ≤2 survivors).
+
+**Power-ups.** Survivors start with 2 random power-ups and collect more from pickup nodes (hunter-invisible; spawn faster as survivors fall). Once two-thirds of the match has elapsed *or* 70% of original survivors are caught, nodes switch to self-select (choose 1 of 3). Max inventory 5. Survivor pool: Decoy, Super Decoy, Cloak, Resurrection, Sonar, Adrenaline, Dead Zone, Tripwire, Counter Trap. Hunters choose 2 from their pool at the start: Constrict, Lure, Scent, Alert, Night Vision. On infection a survivor drops their power-ups on the map (survivor-reclaim only, 5-min expiry) and picks 1 of 3 random hunter power-ups (Constrict excluded). No power-up ever crosses teams.
+
+**Placed power-ups** (Tripwire, Dead Zone, Lure) are positioned by tapping anywhere inside the master boundary.
+
+**Out of bounds** is tiered: under 5s nothing (GPS noise); from 5s your exact position is revealed to the other team each round; a repeat offender (≥2 separate breaches) also loses a random power-up per breach. Standing inside a Dead Zone grants out-of-bounds immunity.
+
+### Upgrading an existing deployment
+Re-run `supabase/schema.sql` in the Supabase SQL Editor — it adds the new columns and the `nodes` table (all changes are additive and safe to run on a live v1 database). Then redeploy the app.

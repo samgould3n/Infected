@@ -24,6 +24,9 @@ export default function NewGame() {
   const [decoysPerSurvivor, setDecoysPerSurvivor] = useState(1);
   const [oobPenalty, setOobPenalty] = useState<'warning' | 'reveal' | 'infect'>('reveal');
   const [huntersSeeEachOther, setHuntersSeeEachOther] = useState(true);
+  const [fenceMoves, setFenceMoves] = useState(true);
+  const [fenceMoveMin, setFenceMoveMin] = useState(8);
+  const [activeRadiusM, setActiveRadiusM] = useState(500);
   const [fence, setFence] = useState<Geofence>({
     type: 'circle',
     center: { lat: 53.5675, lng: -0.0815 },
@@ -44,6 +47,10 @@ export default function NewGame() {
             durationMin, pingIntervalMin, maxPlayers, hunterCount,
             captureRadiusM, decoysPerSurvivor, oobPenalty, huntersSeeEachOther,
             geofence: fence,
+            fenceMoves,
+            fenceMoveMin,
+            activeRadiusM: fence.type === 'circle' ? activeRadiusM : undefined,
+            activeAreaFrac: fence.type === 'polygon' ? 0.5 : undefined,
           },
         },
       });
@@ -104,7 +111,7 @@ export default function NewGame() {
         <FenceEditor value={fence} onChange={setFence} />
         {fence.type === 'circle' && (
           <label className="field" style={{ marginTop: 10 }}>
-            <span>Tap the map to move the centre · radius {fence.radiusM}m</span>
+            <span>Tap the map to move the centre · outer boundary radius {fence.radiusM}m</span>
             <input
               type="range" min={200} max={3000} step={50}
               value={fence.radiusM ?? 800}
@@ -117,6 +124,42 @@ export default function NewGame() {
             <p className="hint" style={{ margin: 0 }}>Tap the map to add corners ({fence.points?.length ?? 0} so far, need 3+)</p>
             <button className="btn small ghost" onClick={() => setFence({ type: 'polygon', points: [] })}>Clear</button>
           </div>
+        )}
+        <p className="hint" style={{ marginTop: 8, marginBottom: 0 }}>
+          This is the <b>master boundary</b> — the play area stays inside it the whole game.
+        </p>
+      </div>
+
+      <div className="panel">
+        <p className="eyebrow" style={{ marginTop: 0 }}>Moving play area</p>
+        <label className="field" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <input
+            type="checkbox" checked={fenceMoves}
+            onChange={(e) => setFenceMoves(e.target.checked)}
+            style={{ width: 20, height: 20, accentColor: 'var(--accent)' }}
+          />
+          <span style={{ margin: 0 }}>The play area shifts around inside the master boundary during the match</span>
+        </label>
+        {fenceMoves && (
+          <label className="field" style={{ marginTop: 10 }}>
+            <span>Moves every: {fenceMoveMin} min (30s warning before each move)</span>
+            <input type="range" min={2} max={30} step={1} value={fenceMoveMin} onChange={(e) => setFenceMoveMin(Number(e.target.value))} />
+          </label>
+        )}
+        {fence.type === 'circle' && (
+          <label className="field" style={{ marginTop: 10 }}>
+            <span>Active area radius: {activeRadiusM}m {activeRadiusM >= (fence.radiusM ?? 800) ? '(same as master — fixed)' : ''}</span>
+            <input
+              type="range" min={150} max={3000} step={50}
+              value={activeRadiusM}
+              onChange={(e) => setActiveRadiusM(Math.min(Number(e.target.value), fence.radiusM ?? 3000))}
+            />
+          </label>
+        )}
+        {fence.type === 'polygon' && (
+          <p className="hint" style={{ margin: '8px 0 0' }}>
+            The active area is half the master&apos;s size and keeps its shape as it moves.
+          </p>
         )}
       </div>
 

@@ -1,6 +1,6 @@
 import { db } from '@/lib/server/db';
 import { err, getPlayer } from '@/lib/server/auth';
-import { handleBounds, tickIfDue, vetLocation } from '@/lib/server/engine';
+import { handleBounds, handleNodes, tickIfDue, vetLocation } from '@/lib/server/engine';
 
 export async function POST(req: Request, { params }: { params: { id: string } }) {
   const me = await getPlayer(req, params.id);
@@ -29,7 +29,10 @@ export async function POST(req: Request, { params }: { params: { id: string } })
 
   let inBounds = true;
   if (game.status === 'active') {
-    inBounds = await handleBounds(game, me, pos);
+    // re-read me with fresh position for node/bounds checks
+    const fresh = { ...me, last_lat: pos.lat, last_lng: pos.lng, last_loc_at: new Date().toISOString() };
+    await handleNodes(game, fresh, pos);
+    inBounds = await handleBounds(game, fresh, pos);
     await tickIfDue(game);
   }
   return Response.json({ ok: true, inBounds });
