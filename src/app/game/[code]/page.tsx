@@ -359,10 +359,10 @@ export default function GamePage() {
       )}
 
       <div className="panel" style={{ marginTop: 14 }}>
-        <p className="eyebrow" style={{ marginTop: 0 }}>
-          Power-ups {me.selfSelect && !isHunter ? '· you now choose your own at nodes' : ''}
-        </p>
         <PowerupBar powerups={me.powerups} onUse={usePowerup} disabled={!!placing} />
+        {me.selfSelect && !isHunter && (
+          <p className="hint" style={{ margin: '8px 0 0' }}>You now choose your own power-up at each node.</p>
+        )}
         {canConstrict && (
           <p className="hint" style={{ margin: '8px 0 0' }}>Constrict shrinks the play area 7.5% — permanent, one use.</p>
         )}
@@ -450,8 +450,8 @@ function describeEvent(e: { type: string; payload: any }): string | null {
     case 'constrict': return 'A hunter shrank the play area!';
     case 'pickup': return `Picked up ${POWERUPS[e.payload.id]?.name ?? 'a power-up'}`;
     case 'pickup_choose': return 'You reached a node — choose a power-up';
-    case 'lure_sprung': return `${e.payload.name} walked into a lure`;
-    case 'you_flagged': return 'You triggered a lure — you are being tracked!';
+    case 'lure_sprung': return `${e.payload.name} walked into a lure — tracking active`;
+    case 'you_flagged': return 'You triggered a lure… you\'re now flagged';
     case 'tripwire_hit': return 'Your tripwire caught a hunter!';
     case 'traps_revealed': return 'Hunter traps revealed on your map';
     case 'scent': return `Scent picked up ${e.payload.name}`;

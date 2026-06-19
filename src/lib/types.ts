@@ -32,6 +32,7 @@ export interface MapNode {
   lng: number;
   radiusM: number;
   kind: 'pickup' | 'drop' | 'lure' | 'deadzone' | 'tripwire';
+  expiresAt: string | null;
 }
 
 export interface PingPoint { lat: number; lng: number; r: number }

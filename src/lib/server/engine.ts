@@ -190,14 +190,17 @@ export async function maybeSpawnNodes(game: any, survivorsLeft: number) {
   const { data: existing } = await db
     .from('nodes').select('id').eq('game_id', game.id).eq('kind', 'pickup').is('claimed_by', null);
   const have = existing?.length ?? 0;
-  const target = Math.max(2, Math.round(12 / Math.max(1, survivorsLeft)) + 1);
+  const target = Math.max(1, Math.round(5 / Math.max(1, survivorsLeft)) + 1);
   const toAdd = Math.max(0, target - have);
   if (toAdd <= 0) return;
   const fence = currentFence(game);
   const rows = [];
   for (let i = 0; i < toAdd; i++) {
     const p = randomPointInFence(fence);
-    rows.push({ game_id: game.id, lat: p.lat, lng: p.lng, radius_m: 25, kind: 'pickup', payload: {} });
+    rows.push({
+      game_id: game.id, lat: p.lat, lng: p.lng, radius_m: 45, kind: 'pickup', payload: {},
+      expires_at: new Date(Date.now() + 5 * 60000).toISOString(),
+    });
   }
   if (rows.length) await db.from('nodes').insert(rows);
 }
@@ -227,7 +230,7 @@ export async function infectPlayer(
   const dropRows = held.filter((id) => SURVIVOR_POOL.includes(id)).map((id) => {
     const p = randomPointInFence(currentFence(game));
     return {
-      game_id: game.id, lat: p.lat, lng: p.lng, radius_m: 25, kind: 'drop',
+      game_id: game.id, lat: p.lat, lng: p.lng, radius_m: 45, kind: 'drop',
       payload: { powerupId: id }, expires_at: new Date(Date.now() + 5 * 60000).toISOString(),
     };
   });

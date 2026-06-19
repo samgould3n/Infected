@@ -78,7 +78,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
           || (n.kind === 'tripwire' && n.payload?.ownerId === me.id)))
         || (me.role === 'hunter' && (n.kind === 'lure' || n.kind === 'deadzone'));
       if (!visible) continue;
-      nodes.push({ id: n.id, lat: n.lat, lng: n.lng, radiusM: n.radius_m, kind: n.kind });
+      nodes.push({ id: n.id, lat: n.lat, lng: n.lng, radiusM: n.radius_m, kind: n.kind, expiresAt: n.expires_at ?? null });
     }
   }
 
