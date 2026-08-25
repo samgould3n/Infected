@@ -64,8 +64,8 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
   }
 
   // Map nodes, role-scoped:
-  //  - survivors see: pickup, drop (their reclaim), deadzone (all), tripwire (their own)
-  //  - hunters see: lure (their team's traps), deadzone (all)
+  //  - survivors see: pickup, drop (their reclaim), lure (rendered identically to pickup — deception), deadzone (all), tripwire (their own)
+  //  - hunters see: lure (their team's traps, tagged), deadzone (all)
   let nodes: MapNode[] = [];
   if (game.status === 'active') {
     const nowIso = new Date().toISOString();
@@ -74,11 +74,13 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
     for (const n of rawNodes ?? []) {
       if (n.expires_at && n.expires_at < nowIso) continue;
       const visible =
-        (me.role === 'survivor' && (n.kind === 'pickup' || n.kind === 'drop' || n.kind === 'deadzone'
+        (me.role === 'survivor' && (n.kind === 'pickup' || n.kind === 'drop' || n.kind === 'lure' || n.kind === 'deadzone'
           || (n.kind === 'tripwire' && n.payload?.ownerId === me.id)))
         || (me.role === 'hunter' && (n.kind === 'lure' || n.kind === 'deadzone'));
       if (!visible) continue;
-      nodes.push({ id: n.id, lat: n.lat, lng: n.lng, radiusM: n.radius_m, kind: n.kind, expiresAt: n.expires_at ?? null });
+      // Survivors must never receive a hint that a 'lure' node is anything but a real pickup.
+      const kindForClient = me.role === 'survivor' && n.kind === 'lure' ? 'pickup' : n.kind;
+      nodes.push({ id: n.id, lat: n.lat, lng: n.lng, radiusM: n.radius_m, kind: kindForClient, expiresAt: n.expires_at ?? null });
     }
   }
 

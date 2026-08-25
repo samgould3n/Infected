@@ -49,6 +49,7 @@ export function PowerupBar({
 }) {
   const [open, setOpen] = useState(true);
   const [infoId, setInfoId] = useState<string | null>(null);
+  const [confirmId, setConfirmId] = useState<string | null>(null);
   ensureSpinKeyframes();
 
   const counts = powerups.reduce<Record<string, number>>((m, id) => ((m[id] = (m[id] ?? 0) + 1), m), {});
@@ -73,7 +74,7 @@ export function PowerupBar({
               const n = counts[id];
               return (
                 <div key={id} className={'pu rarity-' + def.rarity}>
-                  <button className="pu-main" disabled={disabled} onClick={() => onUse(id)}>
+                  <button className="pu-main" disabled={disabled} onClick={() => setConfirmId(id)}>
                     <PowerupIcon id={id} />
                     <span className="pu-name">{def.name}{n > 1 ? ` ×${n}` : ''}</span>
                   </button>
@@ -95,6 +96,28 @@ export function PowerupBar({
               <button className="btn small ghost" onClick={() => setInfoId(null)}><X size={14} /></button>
             </div>
             <p className="hint" style={{ marginTop: 0 }}>{POWERUPS[infoId].blurb}</p>
+          </div>
+        </div>
+      )}
+      {confirmId && POWERUPS[confirmId] && (
+        <div className="modal-backdrop" onClick={() => setConfirmId(null)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="row" style={{ alignItems: 'center', marginBottom: 8 }}>
+              <PowerupIcon id={confirmId} size={28} />
+              <p className="eyebrow" style={{ margin: '0 0 0 8px', flex: 1 }}>
+                Use {POWERUPS[confirmId].name}?{POWERUPS[confirmId].placed ? ' (place on map)' : ''}
+              </p>
+            </div>
+            <p className="hint" style={{ marginTop: 0 }}>{POWERUPS[confirmId].blurb}</p>
+            <div className="row" style={{ marginTop: 12 }}>
+              <button className="btn ghost" style={{ flex: 1 }} onClick={() => setConfirmId(null)}>Cancel</button>
+              <button
+                className="btn" style={{ flex: 1 }}
+                onClick={() => { const id = confirmId; setConfirmId(null); onUse(id); }}
+              >
+                Use it
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -2,6 +2,7 @@
 import { useEffect, useRef } from 'react';
 import type { Map as LMap, LayerGroup } from 'leaflet';
 import type { Geofence } from '@/lib/types';
+import { simplePolygon } from '@/lib/geo';
 
 interface Props {
   value: Geofence;
@@ -37,7 +38,7 @@ export default function FenceEditor({ value, onChange }: Props) {
         } else {
           onChangeRef.current({
             ...v,
-            points: [...(v.points ?? []), { lat: e.latlng.lat, lng: e.latlng.lng }],
+            points: simplePolygon([...(v.points ?? []), { lat: e.latlng.lat, lng: e.latlng.lng }]),
           });
         }
       });

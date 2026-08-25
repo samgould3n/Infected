@@ -38,15 +38,15 @@ function ensureHatchPattern() {
   const pat = document.createElementNS(svgNS, 'pattern');
   pat.setAttribute('id', 'mh-hatch-pattern');
   pat.setAttribute('patternUnits', 'userSpaceOnUse');
-  pat.setAttribute('width', '8');
-  pat.setAttribute('height', '8');
+  pat.setAttribute('width', '7');
+  pat.setAttribute('height', '7');
   pat.setAttribute('patternTransform', 'rotate(45)');
   const line = document.createElementNS(svgNS, 'line');
   line.setAttribute('x1', '0'); line.setAttribute('y1', '0');
-  line.setAttribute('x2', '0'); line.setAttribute('y2', '8');
+  line.setAttribute('x2', '0'); line.setAttribute('y2', '7');
   line.setAttribute('stroke', '#5b6470');
-  line.setAttribute('stroke-width', '2');
-  line.setAttribute('stroke-opacity', '0.55');
+  line.setAttribute('stroke-width', '4');
+  line.setAttribute('stroke-opacity', '0.95');
   pat.appendChild(line);
   defs.appendChild(pat);
 }
@@ -63,7 +63,7 @@ function drawHatchZone(L: any, layer: any, master: Geofence, active: Geofence | 
     const innerPts = approxCircle(active.center, active.radiusM, 64);
     L.polygon([outerPts, innerPts], {
       color: '#5b6470', weight: 1, opacity: 0.5,
-      fillColor: '#5b6470', fillOpacity: 0.18,
+      fillColor: '#5b6470', fillOpacity: 0.5,
       fillRule: 'evenodd',
     }).addTo(layer);
     // Apply the SVG hatch pattern after the element is in the DOM
@@ -81,7 +81,7 @@ function drawHatchZone(L: any, layer: any, master: Geofence, active: Geofence | 
     const inner = active.points.map((p) => [p.lat, p.lng] as [number, number]);
     L.polygon([outer, inner], {
       color: '#5b6470', weight: 1, opacity: 0.5,
-      fillColor: '#5b6470', fillOpacity: 0.18,
+      fillColor: '#5b6470', fillOpacity: 0.5,
       fillRule: 'evenodd',
     }).addTo(layer);
     requestAnimationFrame(() => {

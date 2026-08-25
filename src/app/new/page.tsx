@@ -13,15 +13,22 @@ const PRESETS: { name: string; fence: Geofence }[] = [
   { name: 'Edinburgh Old Town', fence: { type: 'circle', center: { lat: 55.9486, lng: -3.1907 }, radiusM: 800 } },
 ];
 
+/** Clamp a raw text-input value to an integer in range, falling back when empty/invalid. */
+function clampInt(raw: string, min: number, max: number, fallback: number): number {
+  const n = parseInt(raw, 10);
+  if (isNaN(n)) return fallback;
+  return Math.min(max, Math.max(min, n));
+}
+
 export default function NewGame() {
   const router = useRouter();
   const [hostName, setHostName] = useState('');
   const [durationMin, setDurationMin] = useState(60);
   const [pingIntervalMin, setPingIntervalMin] = useState(10);
-  const [maxPlayers, setMaxPlayers] = useState(30);
-  const [hunterCount, setHunterCount] = useState(2);
-  const [captureRadiusM, setCaptureRadiusM] = useState(30);
-  const [decoysPerSurvivor, setDecoysPerSurvivor] = useState(1);
+  const [hunterCount, setHunterCount] = useState('2');
+  const [captureRadiusM, setCaptureRadiusM] = useState('30');
+  const [maxPlayers, setMaxPlayers] = useState('30');
+  const [decoysPerSurvivor, setDecoysPerSurvivor] = useState('1');
   const [oobPenalty, setOobPenalty] = useState<'warning' | 'reveal' | 'infect'>('reveal');
   const [huntersSeeEachOther, setHuntersSeeEachOther] = useState(true);
   const [fenceMoves, setFenceMoves] = useState(true);
@@ -44,8 +51,12 @@ export default function NewGame() {
         body: {
           hostName,
           settings: {
-            durationMin, pingIntervalMin, maxPlayers, hunterCount,
-            captureRadiusM, decoysPerSurvivor, oobPenalty, huntersSeeEachOther,
+            durationMin, pingIntervalMin,
+            maxPlayers: clampInt(maxPlayers, 2, 60, 30),
+            hunterCount: clampInt(hunterCount, 1, 10, 2),
+            captureRadiusM: clampInt(captureRadiusM, 10, 100, 30),
+            decoysPerSurvivor: clampInt(decoysPerSurvivor, 0, 5, 1),
+            oobPenalty, huntersSeeEachOther,
             geofence: fence,
             fenceMoves,
             fenceMoveMin,
@@ -176,21 +187,29 @@ export default function NewGame() {
         <div className="row">
           <label className="field">
             <span>Starting hunters</span>
-            <input className="input" type="number" min={1} max={10} value={hunterCount} onChange={(e) => setHunterCount(Number(e.target.value))} />
+            <input className="input" type="number" min={1} max={10} value={hunterCount}
+              onChange={(e) => setHunterCount(e.target.value.replace(/[^0-9]/g, ''))}
+              onBlur={() => setHunterCount(String(clampInt(hunterCount, 1, 10, 2)))} />
           </label>
           <label className="field">
             <span>Max players</span>
-            <input className="input" type="number" min={2} max={60} value={maxPlayers} onChange={(e) => setMaxPlayers(Number(e.target.value))} />
+            <input className="input" type="number" min={2} max={60} value={maxPlayers}
+              onChange={(e) => setMaxPlayers(e.target.value.replace(/[^0-9]/g, ''))}
+              onBlur={() => setMaxPlayers(String(clampInt(maxPlayers, 2, 60, 30)))} />
           </label>
         </div>
         <div className="row">
           <label className="field">
             <span>Capture range (m)</span>
-            <input className="input" type="number" min={10} max={100} value={captureRadiusM} onChange={(e) => setCaptureRadiusM(Number(e.target.value))} />
+            <input className="input" type="number" min={10} max={100} value={captureRadiusM}
+              onChange={(e) => setCaptureRadiusM(e.target.value.replace(/[^0-9]/g, ''))}
+              onBlur={() => setCaptureRadiusM(String(clampInt(captureRadiusM, 10, 100, 30)))} />
           </label>
           <label className="field">
             <span>Decoys per survivor</span>
-            <input className="input" type="number" min={0} max={5} value={decoysPerSurvivor} onChange={(e) => setDecoysPerSurvivor(Number(e.target.value))} />
+            <input className="input" type="number" min={0} max={5} value={decoysPerSurvivor}
+              onChange={(e) => setDecoysPerSurvivor(e.target.value.replace(/[^0-9]/g, ''))}
+              onBlur={() => setDecoysPerSurvivor(String(clampInt(decoysPerSurvivor, 0, 5, 1)))} />
           </label>
         </div>
         <label className="field">

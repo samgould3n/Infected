@@ -138,6 +138,22 @@ export function circleInsideFence(master: Geofence, center: LatLng, radiusM: num
   return true;
 }
 
+/**
+ * Reorder a set of tapped points into a simple (non-self-intersecting) polygon by sorting
+ * them by angle around their centroid. This guarantees no internal "holes" or crossing edges
+ * regardless of the order corners were tapped in, at the cost of straightening out any
+ * intentionally unusual concave shape.
+ */
+export function simplePolygon(points: LatLng[]): LatLng[] {
+  if (points.length < 4) return points; // 0-3 points can't self-intersect
+  const c = polygonCentroid(points);
+  return [...points].sort((a, b) => {
+    const angA = Math.atan2(a.lat - c.lat, a.lng - c.lng);
+    const angB = Math.atan2(b.lat - c.lat, b.lng - c.lng);
+    return angA - angB;
+  });
+}
+
 /** Uniform-ish random point inside a fence (rejection sampling for polygons). */
 export function randomPointInFence(f: Geofence): LatLng {
   if (f.type === 'circle' && f.center && f.radiusM) {

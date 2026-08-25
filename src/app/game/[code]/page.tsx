@@ -95,38 +95,58 @@ export default function GamePage() {
     return () => { clearInterval(id); channel?.unsubscribe(); };
   }, [session, refresh]);
 
-  // geolocation watch + throttled upload
+  // geolocation watch + throttled upload (movement-triggered) + periodic fallback (stationary players)
+  const myPosRef = useRef<LatLng | null>(null);
+  const uploadLocation = useCallback(async (pos: LatLng, accuracy: number) => {
+    if (!session) return;
+    const last = lastSentRef.current;
+    const moved = last.pos ? haversine(last.pos, pos) : Infinity;
+    const st = stateRef.current;
+    const sonar = st?.me.effects?.sonar && new Date(st.me.effects.sonar).getTime() > Date.now();
+    const interval = sonar ? SONAR_SEND_MS : LOC_SEND_MS;
+    if (Date.now() - last.at < interval && moved < 15) return;
+    lastSentRef.current = { at: Date.now(), pos };
+    try {
+      const r = await api<{ ok: boolean; inBounds?: boolean }>(
+        `/api/games/${session.gameId}/location`,
+        { method: 'POST', token: session.token, body: { ...pos, accuracy } }
+      );
+      if (r.inBounds !== undefined) setInBounds(r.inBounds);
+      if (sonar) refresh();
+    } catch { /* retried next fix */ }
+  }, [session, refresh]);
+
   useEffect(() => {
     if (!session || !('geolocation' in navigator)) {
       if (session) setGpsError('This device has no GPS support.');
       return;
     }
     const watch = navigator.geolocation.watchPosition(
-      async (p) => {
+      (p) => {
         setGpsError(null);
         const pos = { lat: p.coords.latitude, lng: p.coords.longitude };
         setMyPos(pos);
-        const last = lastSentRef.current;
-        const moved = last.pos ? haversine(last.pos, pos) : Infinity;
-        const st = stateRef.current;
-        const sonar = st?.me.effects?.sonar && new Date(st.me.effects.sonar).getTime() > Date.now();
-        const interval = sonar ? SONAR_SEND_MS : LOC_SEND_MS;
-        if (Date.now() - last.at < interval && moved < 15) return;
-        lastSentRef.current = { at: Date.now(), pos };
-        try {
-          const r = await api<{ ok: boolean; inBounds?: boolean }>(
-            `/api/games/${session.gameId}/location`,
-            { method: 'POST', token: session.token, body: { ...pos, accuracy: p.coords.accuracy } }
-          );
-          if (r.inBounds !== undefined) setInBounds(r.inBounds);
-          if (sonar) refresh();
-        } catch { /* retried next fix */ }
+        myPosRef.current = pos;
+        uploadLocation(pos, p.coords.accuracy);
       },
       () => setGpsError('Location is blocked. Allow location access in your browser settings to play.'),
       { enableHighAccuracy: true, maximumAge: 5000, timeout: 15000 }
     );
     return () => navigator.geolocation.clearWatch(watch);
-  }, [session, refresh]);
+  }, [session, uploadLocation]);
+
+  // Bounds checking (in/out of the play area, tiered penalties) depends on repeated location
+  // uploads — but watchPosition often stops firing callbacks once a phone is stationary, which
+  // silently stalls the out-of-bounds tiers after the first warning. This independent timer
+  // re-sends the last known fix on a fixed cadence regardless of movement, so a player standing
+  // still just outside the fence still gets checked every few seconds.
+  useEffect(() => {
+    if (!session) return;
+    const id = setInterval(() => {
+      if (myPosRef.current) uploadLocation(myPosRef.current, 30);
+    }, 6000);
+    return () => clearInterval(id);
+  }, [session, uploadLocation]);
 
   async function joinHere() {
     setBusy(true); setJoinError(null);
