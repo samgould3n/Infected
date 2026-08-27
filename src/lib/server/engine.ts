@@ -1,9 +1,10 @@
 import { db } from './db';
 import { wake } from './broadcast';
 import {
-  fuzzPoint, haversine, insideFence,
+  fuzzPoint, haversine, insideFence, destPoint,
   fenceCenter, randomPointInFence,
-  circleInsideFence, scalePolygon, translatePolygon, polygonCentroid, pointInPolygon,
+  circleInsideFence, scalePolygon, translatePolygon, polygonCentroid, pointInPolygon, polygonArea,
+  circleDistanceForOverlap, estimatePolygonOverlapFrac,
 } from '../geo';
 import type { GameSettings, Geofence, LatLng, PingPoint } from '../types';
 import { INFECTED_POOL, SURVIVOR_POOL, POWERUPS, MAX_INVENTORY } from '../powerups';
@@ -56,21 +57,45 @@ export function initialActiveFence(settings: GameSettings, start: LatLng): Geofe
 }
 
 export function nextActiveFence(master: Geofence, active: Geofence): Geofence {
-  if (active.type === 'circle' && active.radiusM) {
+  // Keep consecutive play areas from relocating too wildly or barely moving at all —
+  // target a random 10–40% area overlap between the old and new active fence.
+  const targetOverlap = 0.10 + Math.random() * 0.30;
+
+  if (active.type === 'circle' && active.radiusM && active.center) {
+    const d = circleDistanceForOverlap(active.radiusM, targetOverlap);
+    for (let i = 0; i < 80; i++) {
+      const angle = Math.random() * 2 * Math.PI;
+      const center = destPoint(active.center, d, angle);
+      if (circleInsideFence(master, center, active.radiusM)) return { type: 'circle', center, radiusM: active.radiusM };
+    }
+    // Master too small to hit the target overlap at this distance — fall back to any valid spot.
     for (let i = 0; i < 80; i++) {
       const c = randomPointInFence(master);
       if (circleInsideFence(master, c, active.radiusM)) return { type: 'circle', center: c, radiusM: active.radiusM };
     }
     return { type: 'circle', center: fenceCenter(master), radiusM: active.radiusM };
   }
+
   const pts = active.points!;
   const c = polygonCentroid(pts);
-  for (let i = 0; i < 120; i++) {
-    const target = randomPointInFence(master);
+  // Approximate the polygon's "radius" to translate a reasonable trial distance for the target overlap,
+  // then verify each candidate against the actual shape via Monte Carlo before accepting it.
+  const approxR = Math.sqrt(polygonArea(pts) / Math.PI);
+  const d = circleDistanceForOverlap(approxR, targetOverlap);
+  let best: Geofence | null = null;
+  let bestErr = Infinity;
+  for (let i = 0; i < 60; i++) {
+    const angle = Math.random() * 2 * Math.PI;
+    const target = destPoint(c, d, angle);
     const moved = translatePolygon(pts, target.lat - c.lat, target.lng - c.lng);
-    if (master.points && moved.every((p) => pointInPolygon(p, master.points!))) return { type: 'polygon', points: moved };
+    if (!master.points || !moved.every((p) => pointInPolygon(p, master.points!))) continue;
+    const overlap = estimatePolygonOverlapFrac(pts, moved, 150);
+    const err = Math.abs(overlap - targetOverlap);
+    if (err < bestErr) { bestErr = err; best = { type: 'polygon', points: moved }; }
+    if (overlap >= 0.10 && overlap <= 0.40) return { type: 'polygon', points: moved }; // good enough, stop early
   }
-  return active;
+  if (best) return best; // closest valid candidate found, even if outside the exact band
+  return active; // master too constrained to move at all
 }
 
 export function shrinkFence(active: Geofence): Geofence {

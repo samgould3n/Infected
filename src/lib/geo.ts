@@ -180,3 +180,45 @@ export function fenceArea(f: Geofence): number {
   if (f.type === 'polygon' && f.points) return polygonArea(f.points);
   return 0;
 }
+
+// ── fence-move overlap control ──────────────────────────────────────
+
+/** Area where two equal-radius circles (radius r, centres distance d apart) overlap. */
+export function circleOverlapArea(r: number, d: number): number {
+  if (d <= 0) return Math.PI * r * r;
+  if (d >= 2 * r) return 0;
+  return 2 * r * r * Math.acos(d / (2 * r)) - (d / 2) * Math.sqrt(4 * r * r - d * d);
+}
+
+/** Centre distance for two equal-radius circles that gives a target overlap fraction (0–1) of one circle's area. */
+export function circleDistanceForOverlap(r: number, targetFrac: number): number {
+  let lo = 0, hi = 2 * r;
+  const area = Math.PI * r * r;
+  for (let i = 0; i < 40; i++) {
+    const mid = (lo + hi) / 2;
+    const frac = circleOverlapArea(r, mid) / area;
+    if (frac > targetFrac) lo = mid; else hi = mid;
+  }
+  return (lo + hi) / 2;
+}
+
+/**
+ * Estimate what fraction of polygon `a`'s area is shared with polygon `b`, via rejection-sampled
+ * Monte Carlo integration inside `a`'s bounding box. No exact polygon-clipping library is used —
+ * this is an approximation, cheap enough to run per fence move (every few minutes).
+ */
+export function estimatePolygonOverlapFrac(a: LatLng[], b: LatLng[], samples = 400): number {
+  const box = polygonBounds(a);
+  let inA = 0, inBoth = 0;
+  for (let i = 0; i < samples; i++) {
+    const p = {
+      lat: box.minLat + Math.random() * (box.maxLat - box.minLat),
+      lng: box.minLng + Math.random() * (box.maxLng - box.minLng),
+    };
+    if (pointInPolygon(p, a)) {
+      inA++;
+      if (pointInPolygon(p, b)) inBoth++;
+    }
+  }
+  return inA > 0 ? inBoth / inA : 0;
+}

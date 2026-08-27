@@ -15,6 +15,8 @@ interface Props {
   role: 'hunter' | 'survivor' | null;
   placing?: boolean;
   onPlace?: (p: LatLng) => void;
+  /** DEV ONLY: every player's true, unfuzzed position with a persistent name/role label. */
+  rawPlayers?: { id: string; name: string; role: 'hunter' | 'survivor' | null; isOriginalHunter?: boolean; lat: number | null; lng: number | null }[];
 }
 
 function drawFence(L: any, layer: any, f: Geofence | null, opts: any) {
@@ -108,7 +110,7 @@ function approxCircle(center: LatLng, radiusM: number, steps: number): [number, 
   return pts;
 }
 
-export default function GameMap({ master, active, next, me, points, nodes, teammates, role, placing, onPlace }: Props) {
+export default function GameMap({ master, active, next, me, points, nodes, teammates, role, placing, onPlace, rawPlayers }: Props) {
   const divRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<LMap | null>(null);
   const fenceLayerRef = useRef<LayerGroup | null>(null);
@@ -176,7 +178,7 @@ export default function GameMap({ master, active, next, me, points, nodes, teamm
         s.textContent = `
           @keyframes mh-pulse { 0%,100%{transform:scale(1);opacity:.7} 50%{transform:scale(1.55);opacity:0} }
           @keyframes mh-pulse-fast { 0%,100%{transform:scale(1);opacity:.7} 50%{transform:scale(1.55);opacity:0} }
-          .mh-node-wrap { position:relative; width:50px; height:50px; transform:translate(-25px,-25px); }
+          .mh-node-wrap { position:relative; width:50px; height:50px; }
           .mh-ring { position:absolute; inset:0; border-radius:50%; border:2px solid #7dd8f8; animation:mh-pulse 2s ease-out infinite; pointer-events:none; }
           .mh-ring.fast { animation:mh-pulse-fast .9s ease-out infinite; }
           .mh-core { position:absolute; inset:14px; border-radius:50%; background:#7dd8f8; display:flex; align-items:center; justify-content:center; }
@@ -225,8 +227,18 @@ export default function GameMap({ master, active, next, me, points, nodes, teamm
         const mine = role === 'hunter' ? '#ff3b5c' : '#38e89c';
         L.circleMarker([me.lat, me.lng], { radius: 7, color: '#ffffff', weight: 2, fillColor: mine, fillOpacity: 1 }).addTo(layer);
       }
+
+      // DEV ONLY: every player's true position, permanently labeled.
+      for (const p of rawPlayers ?? []) {
+        if (p.lat == null || p.lng == null) continue;
+        const col = p.role === 'hunter' ? (p.isOriginalHunter ? '#ff3b5c' : '#ffc53b') : '#38e89c';
+        L.circleMarker([p.lat, p.lng], { radius: 8, color: '#ffffff', weight: 2, fillColor: col, fillOpacity: 0.95 })
+          .bindTooltip(`${p.name} · ${p.role === 'hunter' ? (p.isOriginalHunter ? 'hunter' : 'infected') : 'survivor'}`,
+            { permanent: true, direction: 'top', offset: [0, -10], className: 'mh-dev-label' })
+          .addTo(layer);
+      }
     })();
-  }, [ready, points, nodes, me, teammates, role]);
+  }, [ready, points, nodes, me, teammates, role, rawPlayers]);
 
   return <div ref={divRef} className="map" style={placing ? { outline: '2px solid var(--amber)' } : undefined} />;
 }
